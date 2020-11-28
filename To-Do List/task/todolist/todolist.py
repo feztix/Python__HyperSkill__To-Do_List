@@ -23,21 +23,25 @@ class ToDo:
         self.session: None = None
         self.init_db()
         self.today: datetime.date = datetime.today().date()
-        self.actions: dict = {'1': self.today_tasks, '2': self.create_task, '0': exit}
+        self.actions: dict = {'1': self.today_tasks,
+                              '2': self.week_tasks,
+                              '3': self.all_tasks,
+                              '4': self.create_task,
+                              '0': exit}
 
-    def init_db(self) -> None:
+    def init_db(self):
         engine = create_engine('sqlite:///todo.db?check_same_thread=False')
         base.metadata.create_all(engine)
         self.session = sessionmaker(bind=engine)()
 
-    def create_task(self) -> None:
-        task = input('Enter task:\n')
-        new_row = Table(task=task)
+    def create_task(self):
+        task, deadline = input('Enter task:\n'), input('Enter deadline:\n')
+        new_row = Table(task=task, deadline=datetime.strptime(deadline, '%Y-%m-%d').date())
         self.session.add(new_row)
         self.session.commit()
         print('The task has been added!')
 
-    def today_tasks(self) -> None:
+    def today_tasks(self):
         tasks = self.session.query(Table).filter(Table.deadline == self.today).all()
         print(f'\nToday {datetime.today().day} {datetime.today().strftime("%b")}:')
         if not tasks:
@@ -46,10 +50,33 @@ class ToDo:
             for i, todo in enumerate(tasks, 1):
                 print(f'{i}. {todo}')
 
-    def menu(self) -> None:
+    def week_tasks(self):
+        for day in [self.today + timedelta(days=x) for x in range(7)]:
+            tasks = self.session.query(Table).filter(Table.deadline == day).all()
+            print(f"\n{day.strftime('%A %-d %b:')}")
+            if tasks:
+                for x, todo in enumerate(tasks, 1):
+                    print(f'{x}. {todo}')
+            else:
+                print('Nothing to do!\n')
+
+    def all_tasks(self):
+        tasks = self.session.query(Table).filter(Table.deadline).order_by(Table.deadline).all()
+        print('\nAll tasks:')
+        for i, todo in enumerate(tasks, 1):
+            print(f'{i}. {todo}. {todo.deadline.strftime("%-d %b")}')
+
+    def menu(self):
         while True:
             print()
-            choice: str = input('1) Today\'s tasks\n2) Add task\n0) Exit\n>')
+            choice: str = input('1) Today\'s tasks\n2) Week\'s tasks\n3) All tasks\n'
+                                '4) Add task\n0) Exit\n')
+            # choice = str(input("""  \r 1) Today\'s tasks
+            #                         \r 2) Week\'s tasks
+            #                         \r 3) All tasks
+            #                         \r 4) Add task
+            #                         \r 0) Exit
+            #                         \r > """))
             if choice in self.actions:
                 self.actions[choice]()
             else:
