@@ -26,7 +26,9 @@ class ToDo:
         self.actions: dict = {'1': self.today_tasks,
                               '2': self.week_tasks,
                               '3': self.all_tasks,
-                              '4': self.create_task,
+                              '4': self.missed_tasks,
+                              '5': self.create_task,
+                              '6': self.delete_task,
                               '0': exit}
 
     def init_db(self):
@@ -66,17 +68,33 @@ class ToDo:
         for i, todo in enumerate(tasks, 1):
             print(f'{i}. {todo}. {todo.deadline.strftime("%-d %b")}')
 
+    def missed_tasks(self):
+        tasks = self.session.query(Table).filter(Table.deadline < self.today).all()
+        print('Missed tasks:')
+        if tasks:
+            for x, todo in enumerate(tasks, 1):
+                print(f'{x}. {todo}. {todo.deadline.strftime("%-d %b")}')
+        else:
+            print('Nothing is missed!')
+
+    def delete_task(self):
+        rows = self.session.query(Table).filter(Table.deadline).all()
+        if rows:
+            for x, todelete in enumerate(rows, 1):
+                print(f'{x}. {todelete}. {todelete.deadline.strftime("%-d %b")}')
+            choice = input()
+            self.session.delete(rows[int(choice) - 1])
+            self.session.commit()
+            print('The task has been deleted!')
+            return
+        print('Nothing to delete')
+        return
+
     def menu(self):
         while True:
             print()
             choice: str = input('1) Today\'s tasks\n2) Week\'s tasks\n3) All tasks\n'
-                                '4) Add task\n0) Exit\n')
-            # choice = str(input("""  \r 1) Today\'s tasks
-            #                         \r 2) Week\'s tasks
-            #                         \r 3) All tasks
-            #                         \r 4) Add task
-            #                         \r 0) Exit
-            #                         \r > """))
+                                '4) Missed tasks\n5) Add task\n6) Delete task\n0) Exit\n')
             if choice in self.actions:
                 self.actions[choice]()
             else:
